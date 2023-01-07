@@ -18,6 +18,7 @@ struct Vertex
 {
 	float x;
 	float y;
+	int roomConnectionID{};
 	int MSTGroup{ INVALID_MST_GROUP };
 
 	//Operator Overloading
@@ -51,7 +52,6 @@ struct Vertex
 	{
 		return (x != vertex.x || y != vertex.y);
 	}
-
 };
 
 struct Connection
@@ -187,6 +187,8 @@ public:
 		m_PointList = pointsIn;
 		CalculateSuperTriangle();
 	}
+
+	std::vector<Connection> GetMST() const { return m_MSTEdges; }
 
 	void CalculateTriangulation()
 	{

@@ -4,6 +4,8 @@ class Room;
 class Camera;
 class Graph;
 
+struct Hallway;
+
 class Game final
 {
 public:
@@ -37,10 +39,11 @@ private:
 	//Hidden Settings
 	const int m_NumOfRoomsToGen{ m_NumOfRooms * 7 };
 
-	//Class Instances
+	//Class/Struct Instances
 	std::vector<Room*> m_Rooms{};
 	Camera* m_pCamera{};
 	Graph* m_pGraph{};
+	std::vector<Hallway> m_Hallways{};
 
 	//Camera Variables
 	Point2f m_CameraPosition{ 0.f, 0.f };
@@ -62,4 +65,5 @@ private:
 	void ClearBackground( ) const;
 
 	void HandleInput();
+	void CreateHallways();
 };

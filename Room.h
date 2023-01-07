@@ -5,6 +5,28 @@
 
 #define RANDOM_POSITION
 
+struct Hallway
+{
+	Hallway()
+	{
+		startingPoint = Point2f{};
+		endPoint = Point2f{};
+	}
+	Hallway(const Point2f& start, const Point2f& end)
+	{
+		startingPoint = start;
+		endPoint = end;
+	}
+
+	bool operator==(const Hallway& hallway)
+	{
+		return (Vector2f{ startingPoint } == Vector2f{ hallway.startingPoint } && Vector2f{ endPoint } == Vector2f{ hallway.endPoint });
+	}
+
+	Point2f startingPoint;
+	Point2f endPoint;
+};
+
 class Room
 {
 public:
@@ -122,9 +144,50 @@ public:
 		return utils::IsOverlapping(r1.GetRect(), r2.GetRect());
 	}
 
-	static void ConnectRooms(const Room& r1, const Room& r2)
+	static void ConnectRooms(const Room& r1, const Room& r2, std::vector<Hallway>& hallways)
 	{
-		
+		const float smallestX = std::min(r1.GetPosition().x, r2.GetPosition().x);
+		const float smallestY = std::min(r1.GetPosition().y, r2.GetPosition().y);
+		const float biggestX = std::max(r1.GetPosition().x, r2.GetPosition().x);
+		const float biggestY = std::max(r1.GetPosition().y, r2.GetPosition().y);
+
+		Point2f commonPointBottom{ biggestX, smallestY };
+		Point2f commonPointTop{ smallestX, biggestY };
+		Point2f commonPoint{};
+
+		//Make sure the common point is not a room, if it is then offset it to the other diagonal
+		if (Vector2f{ r1.GetPosition() } == Vector2f{ biggestX, smallestY } ||
+			Vector2f{ r1.GetPosition() } == Vector2f{ smallestX, biggestY })
+		{
+			commonPointBottom = Point2f{ smallestX, smallestY };
+			commonPointTop = Point2f{ biggestX, biggestY };
+		}
+
+		//Make it random weather the rooms will connect from the top or the bottom, since both ways are equally long
+		const int chance{ rand() % 101 };
+		if (chance > 50) commonPoint = commonPointBottom;
+		else commonPoint = commonPointTop;
+
+		if (smallestY == biggestY || smallestX == biggestX)
+		{
+			Hallway hallway{ Point2f{smallestX, smallestY}, Point2f{biggestX, biggestY} };
+			for (const auto& hallwayToCheck : hallways)
+				if (hallway == hallwayToCheck)
+					return;
+			hallways.emplace_back(hallway);
+		}
+		else
+		{
+			Hallway hallway1{ Point2f{r1.GetPosition().x, r1.GetPosition().y}, commonPoint };
+			Hallway hallway2{ Point2f{r2.GetPosition().x, r2.GetPosition().y}, commonPoint };
+
+			for (const auto& hallwayToCheck : hallways)
+				if (hallway1 == hallwayToCheck || hallway2 == hallwayToCheck)
+					return;
+
+			hallways.emplace_back(hallway1);
+			hallways.emplace_back(hallway2);
+		}
 	}
 
 	static bool CompareRoomSize(const Room* a, const Room* b)

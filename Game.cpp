@@ -118,6 +118,12 @@ void Game::Draw( ) const
 					,roomY.GetWidth(), roomY.GetHeight() });
 			}
 		}
+
+		for (const auto& hallway : m_Hallways)
+		{
+			utils::SetColor(colors::red);
+			utils::DrawLine(hallway.startingPoint, hallway.endPoint);
+		}
 	}
 	glPopMatrix();
 }
@@ -150,12 +156,16 @@ void Game::ProcessKeyDownEvent( const SDL_KeyboardEvent & e )
 		std::vector<Vertex> verticesIn;
 		std::vector<Vertex> verticesOut;
 		for (const auto& room : m_Rooms)
-			verticesIn.push_back(Vertex{ room->GetPosition().x, room->GetPosition().y });
+			verticesIn.push_back(Vertex{ room->GetPosition().x, room->GetPosition().y , room->GetId()});
 		m_pGraph->SetPoints(verticesIn, verticesOut);
 	}
 	if (e.keysym.sym == SDLK_l)
 	{
 		m_pGraph->CalculateMST();
+	}
+	if (e.keysym.sym == SDLK_h)
+	{
+		CreateHallways();
 	}
 }
 
@@ -209,4 +219,25 @@ void Game::ClearBackground( ) const
 {
 	glClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT );
+}
+
+
+void Game::CreateHallways()
+{
+	std::vector<Connection> MSTEdges{ m_pGraph->GetMST() };
+	Room room1{}, room2{};
+	auto VertexToRoom = [&](const Vertex& vertex, const std::vector<Room*> rooms) ->Room
+	{
+		for (const auto& room : rooms)
+		{
+			if (vertex.roomConnectionID == room->GetId()) return *room;
+		}
+
+		return Room{};
+	};
+
+	for (const auto& edge : MSTEdges)
+	{
+		Room::ConnectRooms(VertexToRoom(edge.start, m_Rooms), VertexToRoom(edge.end, m_Rooms), m_Hallways);
+	}
 }
