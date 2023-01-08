@@ -80,6 +80,10 @@ namespace utils
 	float DistPointLineSegment(const Point2f& p, const Point2f& a, const Point2f& b);
 	bool IsPointOnLineSegment(const Point2f& p, const Point2f& a, const Point2f& b);
 	bool IntersectRectLine(const Rectf& r, const Point2f& p1, const Point2f& p2, float& intersectMin, float& intersectMax);
+	//Custom Implementations
+	bool DoesLineIntersectRect(const Point2f& p1, const Point2f& p2, const Rectf& rect);
+	bool DoesLineIntersectLine(const Point2f& p1, const Point2f& p2, const Point2f& p3, const Point2f& p4);
+
 
 #pragma endregion CollisionFunctionality
 

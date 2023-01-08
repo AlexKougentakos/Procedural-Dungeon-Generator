@@ -25,6 +25,7 @@ struct Hallway
 
 	Point2f startingPoint;
 	Point2f endPoint;
+	int hallwaySize{ 6 };
 };
 
 class Room
@@ -41,8 +42,6 @@ public:
 	~Room() = default;
 
 	Room operator=(const Room& room) { return *this; }
-
-
 
 	void Initialize()
 	{
@@ -70,9 +69,12 @@ public:
 
 	void Draw() const
 	{
-		utils::SetColor(m_Colour);
-		utils::DrawRect(m_Rect);
-		utils::FillEllipse(GetPosition(), 3, 3);		
+		utils::SetColor(Color4f{0.152f, 0.15f, 0.15f, 1.f});
+		utils::FillRect(m_Rect);
+
+		utils::SetColor(colors::white);
+		utils::DrawRect(Rectf{ m_Rect.left + m_OutlineThickness / 2.f, m_Rect.bottom + m_OutlineThickness / 2.f ,
+			m_Rect.width - m_OutlineThickness / 2.f , m_Rect.height - m_OutlineThickness / 2.f }, m_OutlineThickness / 2.f);
 	}
 
 	void Update()
@@ -99,49 +101,43 @@ public:
 		else roomOut = r2;
 	}
 
-	static bool SeparateRooms(Room& r1, Room& r2)
+	static void SeparateRooms(std::vector<Room*> rooms)
 	{
-		if ( utils::IsOverlapping(r1.GetRect(), r2.GetRect()) )
+		constexpr float roomGap{ 10 };
+		constexpr float fleeRange{1.5f * m_MaxSize + roomGap};
+		constexpr float fleeSpeed{ 10 }; //Increasing this makes the original gaps of the rooms bigger
+
+		for (const auto& room : rooms)
 		{
-			constexpr int moveIncrement{ 3 };
-
-			Vector2f smallToBigVector{};
-			Vector2f smallToBigNormalized{};
-
-			Vector2f bigToSmallNormalized{};
-
-			if (r1.GetArea() > r2.GetArea())
+			for (const auto& roomToEvade : rooms)
 			{
-				smallToBigVector = r1.GetPosition() - r2.GetPosition();
-				smallToBigNormalized = smallToBigVector.Normalized();
+				if (room == roomToEvade) continue;
+				Vector2f fleeVector = Vector2f {room->GetPosition() }- Vector2f{roomToEvade->GetPosition()};
+				const float distance{ fleeVector.Length() };
+				if (distance < fleeRange)
+				{
+					const Vector2f fleeVectorNormal = fleeVector.Normalized();
 
-				bigToSmallNormalized = -smallToBigNormalized;
+					/*fleeVector *= fleeSpeed; //This option scatters them more
+					room->m_Position += fleeVector;*/
+					room->m_Position += fleeVectorNormal * fleeSpeed;
+				}
 			}
-			else
-			{
-				smallToBigVector =  r2.GetPosition() - r1.GetPosition();
-				smallToBigNormalized = smallToBigVector.Normalized();
-
-				bigToSmallNormalized = -smallToBigNormalized;
-			}
-
-			if (r1.GetArea() >= r2.GetArea())
-			{
-				r1.m_Position.x += moveIncrement * smallToBigNormalized.x;
-				r1.m_Position.y += moveIncrement * smallToBigNormalized.y;
-
-				r2.m_Position.x += moveIncrement * bigToSmallNormalized.x;
-				r2.m_Position.y += moveIncrement * bigToSmallNormalized.y;
-			}
-
-			return false;
 		}
-		return true;
 	}
 
-	static bool AreRoomsOverlapping(Room& r1, Room& r2)
+	static bool AreRoomsOverlapping(std::vector<Room*> rooms)
 	{
-		return utils::IsOverlapping(r1.GetRect(), r2.GetRect());
+		for (const auto& room : rooms)
+		{
+			for (const auto& roomToCompare : rooms)
+			{
+				if (room == roomToCompare) continue;
+				if (utils::IsOverlapping(room->GetRect(), roomToCompare->GetRect()))
+					return true;
+			}
+		}
+		return false;
 	}
 
 	static void ConnectRooms(const Room& r1, const Room& r2, std::vector<Hallway>& hallways)
@@ -195,6 +191,7 @@ public:
 		return a->GetArea() < b->GetArea();
 	}
 
+	void SetIsSecondary(bool isSecondary) { m_IsSecondary = isSecondary; }
 
 private:
 	Color4f m_Colour{};
@@ -202,8 +199,11 @@ private:
 	Point2f m_Position{};
 	float m_Area{};
 	int m_RoomID{};
+	float m_OutlineThickness{ m_MinSize / 9.f };
 
-	const int m_MinSize{ 30 }, m_MaxSize{ 80 };
+	static constexpr int m_MinSize{ 30 }, m_MaxSize{ 80 };
 	const int m_WindowBorderEdgeGap{ 20 };
 	const float m_WindowWidth{}, m_WindowHeight{};
+
+	bool m_IsSecondary{false};
 };

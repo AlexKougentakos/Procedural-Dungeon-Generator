@@ -9,12 +9,10 @@ namespace utils
 	}
 
 	
-	inline bool RandomChange(float percentage)
+	inline bool RandomChange(int percentage)
 	{
-		//Cap the precision to 2 floating points
-		constexpr int accuracy{ -2 };
-		percentage = round(powf(percentage * 10, -accuracy)) / powf(10, -accuracy);
-
-
+		const int randomValue{ rand() % 101 };
+		if (randomValue < percentage) return true;
+		else return false;
 	}
 }

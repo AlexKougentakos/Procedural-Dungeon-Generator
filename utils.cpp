@@ -645,41 +645,88 @@ float  utils::DistPointLineSegment( const Point2f& p, const Point2f& a, const Po
 
 bool utils::IntersectRectLine(const Rectf& r, const Point2f& p1, const Point2f& p2, float& intersectMin, float& intersectMax)
 {
-	// Parameters
-	// input: 
-	//   r: axis aligned bounding box, start and end points of line segment.
-	//   p1, p2: line
-	// output: 
-	//   intersectMin and intersectMax: in the interval [0,1] if intersection point is on the line segment. 
-	// return
-	//   true if there is an intersection
-
-	// Example of how to use
-	//float min{};
-	//float max{};
-	//if (utils::IntersectRectLine(rect, p1, p2, min, max))
-	//{
-	//	Point2f intersectP1{ p1 + (Vector2f(p2) - Vector2f(p1)) * min };
-	//	Point2f intersectP2{ p1 + (Vector2f(p2) - Vector2f(p1)) * max };
-	//}
-
 	// 4 floats to convert rect space to line space
 	// x1: value between 0 and 1 where 0 is on p1 and 1 is on p2, <0 and >1 means intersection is not on line segment
-	float x1{ (r.left - p1.x) / (p2.x - p1.x) };
-	float x2{ (r.left + r.width - p1.x) / (p2.x - p1.x) };
-	float y1{ (r.bottom - p1.y) / (p2.y - p1.y) };
-	float y2{ (r.bottom + r.height - p1.y) / (p2.y - p1.y) };
+	float x1 = (r.left - p1.x) / (p2.x - p1.x);
+	float x2 = (r.left + r.width - p1.x) / (p2.x - p1.x);
+	float y1 = (r.bottom - p1.y) / (p2.y - p1.y);
+	float y2 = (r.bottom + r.height - p1.y) / (p2.y - p1.y);
 
 	using std::max; using std::min;
-	float tMin{ max(min(x1,x2),min(y1,y2)) };
-	float tMax{ min(max(x1,x2), max(y1,y2)) };
-	if (tMin > tMax)
-	{
+	float tMin = max(min(x1, x2), min(y1, y2));
+	float tMax = min(max(x1, x2), max(y1, y2));
+	if (tMin > tMax) {
 		return false;
 	}
+
+	// Check if the intersection point is on the defined line segment
+	if (tMin < 0 || tMax > 1) {
+		return false;
+	}
+
 	intersectMin = tMin;
 	intersectMax = tMax;
 	return true;
 }
 
+bool utils::DoesLineIntersectRect(const Point2f& p1, const Point2f& p2, const Rectf& rect)
+{
+	// Compute the four edges of the rectangle
+	Point2f top_left(rect.left, rect.bottom + rect.height);
+	Point2f top_right(rect.left + rect.width, rect.bottom + rect.height);
+	Point2f bottom_left(rect.left, rect.bottom);
+	Point2f bottom_right(rect.left + rect.width, rect.bottom);
+
+	// Check if the line formed by the two points intersects any of the edges
+	if (DoesLineIntersectLine(p1, p2, top_left, top_right)) return true;
+	if (DoesLineIntersectLine(p1, p2, top_right, bottom_right)) return true;
+	if (DoesLineIntersectLine(p1, p2, bottom_right, bottom_left)) return true;
+	if (DoesLineIntersectLine(p1, p2, bottom_left, top_left)) return true;
+
+	// If the line does not intersect any of the edges, check if one of the endpoints lies inside the rectangle
+	if (IsPointInRect(p1, rect)) return true;
+	if (IsPointInRect(p2, rect)) return true;
+
+	// If the line does not intersect any of the edges and none of the endpoints lie inside the rectangle, then the line is not intersecting the rectangle
+	return false;
+}
+
+bool point_on_line(float x, float y, const Point2f& p1, const Point2f& p2) {
+	// Check if the point is on the line
+	float epsilon = 0.00001f;
+	float slope = (p2.y - p1.y) / (p2.x - p1.x);
+	float y_intercept = p1.y - slope * p1.x;
+	return abs(y - (slope * x + y_intercept)) < epsilon;
+}
+
+bool point_on_line_segment(float x, float y, const Point2f& p1, const Point2f& p2) {
+	// Check if the point is within the bounds of the line segment
+	return (x >= std::min(p1.x, p2.x) || x <= std::max(p1.x, p2.x)) && (y >= std::min(p1.y, p2.y) || y <= std::max(p1.y, p2.y)) &&
+		(point_on_line(x, y, p1, p2));
+}
+bool utils::DoesLineIntersectLine(const Point2f& p1, const Point2f& p2, const Point2f& p3, const Point2f& p4)
+{
+	// Compute the coefficients of the equations of the lines formed by p1-p2 and p3-p4
+	float a1 = p2.y - p1.y;
+	float b1 = p1.x - p2.x;
+	float c1 = a1 * p1.x + b1 * p1.y;
+
+	float a2 = p4.y - p3.y;
+	float b2 = p3.x - p4.x;
+	float c2 = a2 * p3.x + b2 * p3.y;
+
+	// Compute the intersection point
+	float determinant = a1 * b2 - a2 * b1;
+	if (determinant == 0) {
+		// The lines are parallel
+		return false;
+	}
+	else {
+		float x = (b2 * c1 - b1 * c2) / determinant;
+		float y = (a1 * c2 - a2 * c1) / determinant;
+
+		// Check if the intersection point lies on both lines
+		return point_on_line_segment(x, y, p1, p2) && point_on_line_segment(x, y, p3, p4);
+	}
+}
 #pragma endregion CollisionFunctionality

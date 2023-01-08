@@ -16,6 +16,32 @@
 
 struct Vertex
 {
+	Vertex() = default;
+	Vertex(Point2f point)
+	{
+		x = point.x;
+		y = point.y;
+	}
+	Vertex(float _x, float _y)
+	{
+		x = _x;
+		y = _y;
+	}
+	Vertex(float _x, float _y, int roomID)
+	{
+		x = _x;
+		y = _y;
+
+		roomConnectionID = roomID;
+	}
+	Vertex(Vertex vertex, int roomID)
+	{
+		x = vertex.x;
+		y = vertex.y;
+
+		roomConnectionID = roomID;
+	}
+
 	float x;
 	float y;
 	int roomConnectionID{};
@@ -182,13 +208,13 @@ class Graph
 public:
 	Graph() = default;
 
-	void SetPoints(const std::vector<Vertex>& pointsIn, std::vector<Vertex>& pointsOut)
+	void SetPoints(const std::vector<Vertex>& pointsIn)
 	{
 		m_PointList = pointsIn;
 		CalculateSuperTriangle();
 	}
 
-	std::vector<Connection> GetMST() const { return m_MSTEdges; }
+	std::vector<Connection> GetRoomConnections() const { return m_RoomConnections; }
 
 	void CalculateTriangulation()
 	{
@@ -261,6 +287,7 @@ public:
 			m_Triangulation.erase(std::remove(m_Triangulation.begin(), m_Triangulation.end(), triangleToRemove), m_Triangulation.end());
 		}
 	}
+
 	void CalculateMST()
 	{
 		FillEdges();
@@ -273,7 +300,11 @@ public:
 		int currentMSTGroup{ INVALID_MST_GROUP + 1 };
 		for (auto& edge : m_Edges)
 		{
-			if (edge.start.MSTGroup == edge.end.MSTGroup && edge.start.MSTGroup != INVALID_MST_GROUP) continue;
+			if (edge.start.MSTGroup == edge.end.MSTGroup && edge.start.MSTGroup != INVALID_MST_GROUP)
+			{
+				m_DeletedEdges.emplace_back(edge);
+				continue;
+			}
 
 
 			if (edge.end.MSTGroup == INVALID_MST_GROUP && edge.start.MSTGroup == INVALID_MST_GROUP)
@@ -373,6 +404,32 @@ public:
 			utils::SetColor(colors::blue);
 			utils::DrawLine(edge.start.x, edge.start.y, edge.end.x, edge.end.y);
 		}
+
+		for (const auto& edge : m_DeletedEdges)
+		{
+			utils::SetColor(colors::white);
+			utils::DrawLine(edge.start.x, edge.start.y, edge.end.x, edge.end.y);
+		}
+
+		for (const auto& edge : m_RoomConnections)
+		{
+			utils::SetColor(colors::red);
+			utils::DrawLine(edge.start.x, edge.start.y, edge.end.x, edge.end.y);
+		}
+	}
+
+	void FillRoomConnections()
+	{
+		m_RoomConnections.clear();
+		m_RoomConnections = m_MSTEdges;
+
+		for (const auto& edge : m_DeletedEdges)
+		{
+			if (utils::RandomChange(15))
+			{
+				m_RoomConnections.emplace_back(edge);
+			}
+		}
 	}
 
 private:
@@ -383,6 +440,8 @@ private:
 	std::vector<Vertex> m_PointList{};
 	std::vector<Connection> m_Edges{};
 	std::vector<Connection> m_MSTEdges{};
+	std::vector<Connection> m_DeletedEdges{};
+	std::vector<Connection> m_RoomConnections{};
 
 	//Function Definitions
 	void CalculateSuperTriangle()

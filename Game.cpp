@@ -47,6 +47,8 @@ void Game::Cleanup( )
 {
 	for (const auto& room : m_Rooms)
 		delete room;
+	for (const auto& room : m_DeletedRooms)
+		delete room;
 	delete m_pCamera;
 	delete m_pGraph;
 }
@@ -64,24 +66,72 @@ void Game::Update( float elapsedSec )
 	//	std::cout << "Left and up arrow keys are down\n";
 	//}
 
-	bool didSeparate{ false };
-	for (int i{0}; i < m_Rooms.size(); ++i)
-		for (int j{0}; j < m_Rooms.size(); ++j)
-		{
-			//Check if room is overlapping with itself.
-			if (m_Rooms[i] == m_Rooms[j]) continue;
-			didSeparate = Room::SeparateRooms(*m_Rooms[i], *m_Rooms[j]);
-		}
-
-	if (didSeparate && !m_DidDelete)
+	switch (m_CurrentStage)
+	{
+		//Step 1: Separate the rooms
+	case Game::roomSeparation:
+		Room::SeparateRooms(m_Rooms);
+		if (!Room::AreRoomsOverlapping(m_Rooms)) m_CurrentStage = Game::CurrentStage::roomDeletion;
+		break;
+		//Step 2: Delete all the secondary rooms
+	case Game::roomDeletion:
 	{
 		for (int i{m_NumOfRoomsToGen}; i > m_NumOfRooms; --i)
 		{
-			delete m_Rooms[i-1];
+			m_DeletedRooms.emplace_back(m_Rooms[i - 1]);
 			m_Rooms.pop_back();
 		}
-		m_DidDelete = true;
+		std::vector<Vertex> points{};
+		for (const auto& room : m_Rooms)
+			points.emplace_back(room->GetPosition(), room->GetId());
+
+		m_pGraph->SetPoints(points);
 	}
+	m_CurrentStage = Game::CurrentStage::delaunyTriangulation;
+		break;
+		//Step 3: Calculate the Delauny Triangulation
+	case Game::delaunyTriangulation:
+		m_pGraph->CalculateTriangulation();
+		m_CurrentStage = Game::CurrentStage::MST;
+		break;
+		//Step 4: Find the minimum spanning tree for the triangulation
+	case Game::MST:
+		m_pGraph->CalculateMST();
+		m_CurrentStage = Game::CurrentStage::roomConnections;
+		break;
+		//Step 5: Randomly add deleted edges to add variation and cycles to the dungeon
+	case Game::roomConnections:
+		m_pGraph->FillRoomConnections();
+		m_CurrentStage = Game::CurrentStage::addingHallways;
+		break;
+		//Step 6: Connect the rooms based on the room connections formed from the previous steps
+	case Game::addingHallways:
+		CreateHallways();
+		m_CurrentStage = Game::CurrentStage::addDeletedRooms;
+			break;
+	case Game::addDeletedRooms:
+		for (const auto& hallway : m_Hallways)
+		{
+			float minFlt{}, maxFlt{};
+			for (auto it = m_DeletedRooms.begin(); it != m_DeletedRooms.end();)
+			{
+				auto& room = *it;
+				if (utils::IntersectRectLine(room->GetRect(), hallway.startingPoint, hallway.endPoint, minFlt, maxFlt)) 
+				{
+					room->SetIsSecondary(true);
+					m_Rooms.emplace_back(std::move(room));
+					it = m_DeletedRooms.erase(it);
+				}
+				else 
+				{
+					++it;
+				}
+			}
+		}
+		m_CurrentStage = Game::CurrentStage::done;
+		break;
+	}
+
 
 	HandleInput();
 	for (const auto& room : m_Rooms)
@@ -91,18 +141,30 @@ void Game::Update( float elapsedSec )
 void Game::Draw( ) const
 {
 	ClearBackground( );
-
+	if (m_CurrentStage != done) return;
 	glPushMatrix();
 	{
 		glScalef(m_ZoomIn, m_ZoomIn, m_ZoomIn);
 		//Update camera canvas
 		m_pCamera->Transform(m_CameraPosition);
 
+		for (const auto& hallway : m_Hallways)
+		{
+			utils::SetColor(Color4f{ 76.1f, 69.8f, 50.2f ,1.0f });
+			utils::DrawLine(hallway.startingPoint, hallway.endPoint, float(hallway.hallwaySize));
+		}
+
 		for (const auto& room : m_Rooms)
 			room->Draw();
 
 		if (m_DoDebug)
 		{
+			for (const auto& room : m_DeletedRooms)
+			{
+				utils::SetColor(colors::cyan);
+				utils::DrawRect(room->GetRect());
+			}
+
 			m_pGraph->DebugDraw();
 			for (const auto& room : m_Rooms)
 			{
@@ -119,11 +181,7 @@ void Game::Draw( ) const
 			}
 		}
 
-		for (const auto& hallway : m_Hallways)
-		{
-			utils::SetColor(colors::red);
-			utils::DrawLine(hallway.startingPoint, hallway.endPoint);
-		}
+
 	}
 	glPopMatrix();
 }
@@ -147,26 +205,6 @@ void Game::HandleInput()
 void Game::ProcessKeyDownEvent( const SDL_KeyboardEvent & e )
 {
 
-	//todo add these manually
-	if (e.keysym.sym == SDLK_k)
-	{
-		m_pGraph->CalculateTriangulation();
-	}	if (e.keysym.sym == SDLK_j)
-	{
-		std::vector<Vertex> verticesIn;
-		std::vector<Vertex> verticesOut;
-		for (const auto& room : m_Rooms)
-			verticesIn.push_back(Vertex{ room->GetPosition().x, room->GetPosition().y , room->GetId()});
-		m_pGraph->SetPoints(verticesIn, verticesOut);
-	}
-	if (e.keysym.sym == SDLK_l)
-	{
-		m_pGraph->CalculateMST();
-	}
-	if (e.keysym.sym == SDLK_h)
-	{
-		CreateHallways();
-	}
 }
 
 void Game::ProcessKeyUpEvent( const SDL_KeyboardEvent& e )
@@ -179,7 +217,8 @@ void Game::ProcessMouseMotionEvent( const SDL_MouseMotionEvent& e )
 	//std::cout << "MOUSEMOTION event: " << e.x << ", " << e.y << std::endl;
 	if (m_IsMouseDown)
 	{
-		m_CameraPosition = Point2f{ float(e.x), float(e.y) };
+		//todo add mouse movable camera
+		//m_CameraPosition = Point2f{ float(e.x), float(e.y) };
 	}
 }
 
@@ -224,7 +263,7 @@ void Game::ClearBackground( ) const
 
 void Game::CreateHallways()
 {
-	std::vector<Connection> MSTEdges{ m_pGraph->GetMST() };
+	std::vector<Connection> MSTEdges{ m_pGraph->GetRoomConnections() };
 	Room room1{}, room2{};
 	auto VertexToRoom = [&](const Vertex& vertex, const std::vector<Room*> rooms) ->Room
 	{

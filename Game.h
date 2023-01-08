@@ -29,18 +29,32 @@ public:
 	void ProcessScrollDownEvent(const SDL_MouseWheelEvent& e);
 
 private:
+	enum CurrentStage
+	{
+		roomSeparation,
+		roomDeletion,
+		delaunyTriangulation,
+		MST,
+		roomConnections,
+		addingHallways,
+		addDeletedRooms,
+		done
+	};
+
 	// DATA MEMBERS
 	const Window m_Window;
 
 	//Settings
-	const int m_NumOfRooms{ 6 };
+	const int m_NumOfRooms{ 10 };
 	const int m_CameraMoveSpeed{ 10 };
 
 	//Hidden Settings
-	const int m_NumOfRoomsToGen{ m_NumOfRooms * 7 };
+	const int m_NumOfRoomsToGen{ m_NumOfRooms * 2 };
+	CurrentStage m_CurrentStage{ roomSeparation };
 
 	//Class/Struct Instances
 	std::vector<Room*> m_Rooms{};
+	std::vector<Room*> m_DeletedRooms{};
 	Camera* m_pCamera{};
 	Graph* m_pGraph{};
 	std::vector<Hallway> m_Hallways{};
@@ -55,7 +69,7 @@ private:
 	//Other Variables
 	bool m_IsMouseDown{ false };
 	bool m_DidDelete{ false };
-	bool m_DoDebug{ true };
+	bool m_DoDebug{ false };
 	bool m_DidSetPoints{ false };
 
 
