@@ -40,6 +40,13 @@ struct Point2f
 		y -= point.y;
 		return *this;
 	}
+	Point2f& operator/=(const float num)
+	{
+		x /= num;
+		y /= num;
+		return *this;
+	}
+
 
 	float x;
 	float y;

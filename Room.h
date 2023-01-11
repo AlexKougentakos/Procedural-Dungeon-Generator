@@ -1,6 +1,5 @@
 #pragma once
 #include "Texture.h"
-#include  "Definitions.h"
 #include "pch.h"
 
 #define RANDOM_POSITION
@@ -35,7 +34,8 @@ public:
 	Room(float winWidth, float winHeight, int ID)
 		:m_WindowWidth{ winWidth },
 		m_WindowHeight{ winHeight },
-		m_RoomID{ID}
+		m_RoomID{ID},
+		m_RoomType{DEFAULT}
 	{
 		Initialize();
 	}
@@ -69,10 +69,18 @@ public:
 
 	void Draw() const
 	{
+
 		utils::SetColor(Color4f{0.152f, 0.15f, 0.15f, 1.f});
 		utils::FillRect(m_Rect);
+		if (m_RoomType == BOSS)
+		{
+			const Texture bossIconTexture{ "Assets/boss_icon.png" };
+			bossIconTexture.Draw(Rectf{m_Rect.left + m_Rect.width / 2.f - bossIconTexture.GetWidth() / 2.f, 
+				m_Rect.bottom + m_Rect.height / 2.f - bossIconTexture.GetHeight()	/ 2.f,
+				bossIconTexture.GetWidth(), bossIconTexture.GetHeight()});
+		}
 
-		utils::SetColor(colors::white);
+		utils::SetColor(Color4f{ 1,1,1,1 });
 		utils::DrawRect(Rectf{ m_Rect.left + m_OutlineThickness / 2.f, m_Rect.bottom + m_OutlineThickness / 2.f ,
 			m_Rect.width - m_OutlineThickness / 2.f , m_Rect.height - m_OutlineThickness / 2.f }, m_OutlineThickness / 2.f);
 	}
@@ -101,11 +109,11 @@ public:
 		else roomOut = r2;
 	}
 
-	static void SeparateRooms(std::vector<Room*> rooms)
+	static void SeparateRooms(std::vector<Room*> rooms, float roomTightness)
 	{
-		constexpr float roomGap{ 10 };
-		constexpr float fleeRange{1.5f * m_MaxSize + roomGap};
-		constexpr float fleeSpeed{ 10 }; //Increasing this makes the original gaps of the rooms bigger
+		constexpr float roomGap{ 15 };
+		const float fleeRange{ roomTightness * m_MaxSize + roomGap};
+		constexpr float fleeSpeed{ 10 };
 
 		for (const auto& room : rooms)
 		{
@@ -121,6 +129,11 @@ public:
 					/*fleeVector *= fleeSpeed; //This option scatters them more
 					room->m_Position += fleeVector;*/
 					room->m_Position += fleeVectorNormal * fleeSpeed;
+					room->m_IsFleeing = true;
+				}
+				else
+				{
+					room->m_IsFleeing = false;
 				}
 			}
 		}
@@ -191,7 +204,16 @@ public:
 		return a->GetArea() < b->GetArea();
 	}
 
-	void SetIsSecondary(bool isSecondary) { m_IsSecondary = isSecondary; }
+	bool GetIsFleeing() const { return m_IsFleeing; }
+
+	enum SpecialRoomTypes
+	{
+		DEFAULT,
+		BOSS
+	};
+
+	SpecialRoomTypes GetRoomType() const { return m_RoomType; }
+	void SetSpecialRoom(SpecialRoomTypes type) { m_RoomType = type; }
 
 private:
 	Color4f m_Colour{};
@@ -200,10 +222,11 @@ private:
 	float m_Area{};
 	int m_RoomID{};
 	float m_OutlineThickness{ m_MinSize / 9.f };
+	bool m_IsFleeing{ false };
 
 	static constexpr int m_MinSize{ 30 }, m_MaxSize{ 80 };
 	const int m_WindowBorderEdgeGap{ 20 };
 	const float m_WindowWidth{}, m_WindowHeight{};
 
-	bool m_IsSecondary{false};
+	SpecialRoomTypes m_RoomType{DEFAULT};
 };

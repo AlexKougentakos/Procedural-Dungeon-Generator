@@ -14,17 +14,18 @@ public:
 		
 	}
 
-	void Transform(const Point2f& target) const
+	void Transform(const Point2f& target)
 	{
 		Point2f targetPos{ target };
 		Clamp(targetPos);
+		m_ClampedPoint = targetPos;
 		glTranslatef(-targetPos.x, -targetPos.y, 0.f);
 	}
 
-	void Clamp(Point2f& bottomLeft) const
-	{
-		// TODO: FIX THE CLAMP METHOD
+	Point2f GetClampedTarget() { return m_ClampedPoint; }
 
+	void Clamp(Point2f& bottomLeft)
+	{
 		if (bottomLeft.x < m_LevelBoundaries.left)
 		{
 			bottomLeft.x = m_LevelBoundaries.left;
@@ -52,5 +53,7 @@ private:
 	Rectf m_LevelBoundaries{};
 	float m_Width{};
 	float m_Height{};
+
+	Point2f m_ClampedPoint{};
 
 };

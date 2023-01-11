@@ -101,9 +101,6 @@
     <ClInclude Include="Graph.h">
       <Filter>Project Files\Classes</Filter>
     </ClInclude>
-    <ClInclude Include="Definitions.h">
-      <Filter>Project Files\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="MathHelpers.h">
       <Filter>Framework Files</Filter>
     </ClInclude>

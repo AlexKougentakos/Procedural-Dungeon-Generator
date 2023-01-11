@@ -5,7 +5,6 @@
 #include <algorithm>
 
 #include "MathHelpers.h"
-#include "Definitions.h"
 #include  "Texture.h"
 #include <map>
 
@@ -116,7 +115,6 @@ struct Connection
 		return (weight < connection.weight);
 	}
 };
-
 
 struct Triangle
 {
@@ -231,7 +229,6 @@ public:
 				if (utils::IsPointInCircle(Point2f{ point.x, point.y }, triangle.circumCircle))
 					m_BadTriangles.push_back(triangle);
 			}
-
 			std::vector<Connection> polygon;
 			for (const auto& badTriangle : m_BadTriangles) 
 			{
@@ -272,20 +269,21 @@ public:
 			}
 		}
 
+		//Not needed for the rooms but if you need the triangulation for anything else this might be needed.
 		//clean the lines up, remove the super triangle
-		std::vector<Triangle> trianglesToRemove;
-		for (const auto& triangle : m_Triangulation) {
-			 if (triangle.a == m_SuperTriangle.a || triangle.a == m_SuperTriangle.b || triangle.a == m_SuperTriangle.c
-			|| triangle.b == m_SuperTriangle.a || triangle.b == m_SuperTriangle.b || triangle.b == m_SuperTriangle.c
-			|| triangle.c == m_SuperTriangle.a || triangle.c == m_SuperTriangle.b || triangle.c == m_SuperTriangle.c)
-			 {
-				trianglesToRemove.push_back(triangle);
-			}
-		}
-
-		for (const auto& triangleToRemove : trianglesToRemove) {
-			m_Triangulation.erase(std::remove(m_Triangulation.begin(), m_Triangulation.end(), triangleToRemove), m_Triangulation.end());
-		}
+		//std::vector<Triangle> trianglesToRemove;
+		//for (const auto& triangle : m_Triangulation) {
+		//	 if (triangle.a == m_SuperTriangle.a || triangle.a == m_SuperTriangle.b || triangle.a == m_SuperTriangle.c
+		//	|| triangle.b == m_SuperTriangle.a || triangle.b == m_SuperTriangle.b || triangle.b == m_SuperTriangle.c
+		//	|| triangle.c == m_SuperTriangle.a || triangle.c == m_SuperTriangle.b || triangle.c == m_SuperTriangle.c)
+		//	 {
+		//		trianglesToRemove.push_back(triangle);
+		//	}
+		//}
+		//
+		//for (const auto& triangleToRemove : trianglesToRemove) {
+		//	m_Triangulation.erase(std::remove(m_Triangulation.begin(), m_Triangulation.end(), triangleToRemove), m_Triangulation.end());
+		//}
 	}
 
 	void CalculateMST()
@@ -378,13 +376,13 @@ public:
 
 		//Draw Circum Circle of Super Triangle
 		Ellipsef circum { m_SuperTriangle.circumCircle.center, m_SuperTriangle.circumCircle.radius, m_SuperTriangle.circumCircle.radius };
-		utils::SetColor(colors::green);
+		utils::SetColor(Color4f{ 0,1,0,1 });
 		utils::FillEllipse(m_SuperTriangle.circumCircle.center, 5, 5);
 		utils::DrawEllipse(circum);
 
 		for (const auto& triangle : m_Triangulation)
 		{
-			utils::SetColor(colors::green);
+			utils::SetColor(Color4f{ 0,1,0,1 });
 			utils::DrawPolygon( {Point2f{ triangle.a.x, triangle.a.y }, Point2f{ triangle.b.x, triangle.b.y }, Point2f{ triangle.c.x, triangle.c.y }} );
 		}
 
@@ -395,25 +393,25 @@ public:
 
 		for (const auto& edge : m_Edges)
 		{
-			const Texture edgeWeight("W:" + std::to_string(int(std::round(edge.weight))), "Fonts/dogica.ttf", 7, colors::white);
+			const Texture edgeWeight("W:" + std::to_string(int(std::round(edge.weight))), "Fonts/dogica.ttf", 7, Color4f{ 1,1,1,1 });
 			edgeWeight.Draw(Point2f{ (edge.start.x + edge.end.x) / 2.f, (edge.start.y + edge.end.y) / 2.f });
 		}
 
 		for (const auto& edge : m_MSTEdges)
 		{
-			utils::SetColor(colors::blue);
+			utils::SetColor(Color4f{ 0,0,1,1 });
 			utils::DrawLine(edge.start.x, edge.start.y, edge.end.x, edge.end.y);
 		}
 
 		for (const auto& edge : m_DeletedEdges)
 		{
-			utils::SetColor(colors::white);
+			utils::SetColor(Color4f{ 1,1,1,1 });
 			utils::DrawLine(edge.start.x, edge.start.y, edge.end.x, edge.end.y);
 		}
 
 		for (const auto& edge : m_RoomConnections)
 		{
-			utils::SetColor(colors::red);
+			utils::SetColor(Color4f{ 1,0,0,1 });
 			utils::DrawLine(edge.start.x, edge.start.y, edge.end.x, edge.end.y);
 		}
 	}
@@ -430,6 +428,18 @@ public:
 				m_RoomConnections.emplace_back(edge);
 			}
 		}
+	}
+
+	void Reset()
+	{
+		m_SuperTriangle = {};
+		m_Triangulation.clear();
+		m_BadTriangles.clear();
+		m_PointList.clear();
+		m_Edges.clear();
+		m_MSTEdges.clear();
+		m_DeletedEdges.clear();
+		m_RoomConnections.clear();
 	}
 
 private:

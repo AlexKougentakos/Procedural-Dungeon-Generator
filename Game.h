@@ -9,22 +9,23 @@ struct Hallway;
 class Game final
 {
 public:
-	explicit Game( const Window& window );
+	explicit Game(const Window& window);
 	Game(const Game& other) = delete;
 	Game& operator=(const Game& other) = delete;
-	Game( Game&& other) = delete;
+	Game(Game&& other) = delete;
 	Game& operator=(Game&& other) = delete;
 	~Game();
 
-	void Update( float elapsedSec );
-	void Draw( ) const;
+	void Update(float elapsedSec);
+	void DrawUI() const;
+	void Draw() const;
 
 	// Event handling
-	void ProcessKeyDownEvent( const SDL_KeyboardEvent& e );
-	void ProcessKeyUpEvent( const SDL_KeyboardEvent& e );
-	void ProcessMouseMotionEvent( const SDL_MouseMotionEvent& e );
-	void ProcessMouseDownEvent( const SDL_MouseButtonEvent& e );
-	void ProcessMouseUpEvent( const SDL_MouseButtonEvent& e );
+	void ProcessKeyDownEvent(const SDL_KeyboardEvent& e);
+	void ProcessKeyUpEvent(const SDL_KeyboardEvent& e);
+	void ProcessMouseMotionEvent(const SDL_MouseMotionEvent& e);
+	void ProcessMouseDownEvent(const SDL_MouseButtonEvent& e);
+	void ProcessMouseUpEvent(const SDL_MouseButtonEvent& e);
 	void ProcessScrollUpEvent(const SDL_MouseWheelEvent& e);
 	void ProcessScrollDownEvent(const SDL_MouseWheelEvent& e);
 
@@ -45,12 +46,13 @@ private:
 	const Window m_Window;
 
 	//Settings
-	const int m_NumOfRooms{ 10 };
-	const int m_CameraMoveSpeed{ 10 };
+	int m_MinimumNumOfRooms{ 10 };
+	float m_RoomTightness{1.f}; //[1,3]
 
 	//Hidden Settings
-	const int m_NumOfRoomsToGen{ m_NumOfRooms * 2 };
+	int m_NumOfRoomsToGen{ m_MinimumNumOfRooms * 2 };
 	CurrentStage m_CurrentStage{ roomSeparation };
+	const int m_CameraMoveSpeed{ 10 };
 
 	//Class/Struct Instances
 	std::vector<Room*> m_Rooms{};
@@ -67,17 +69,25 @@ private:
 	float m_ZoomIn{ 1.f };
 
 	//Other Variables
-	bool m_IsMouseDown{ false };
 	bool m_DidDelete{ false };
 	bool m_DoDebug{ false };
 	bool m_DidSetPoints{ false };
+	bool m_IsTimerPaused{ false };
+
+	//Timer Variables
+	float m_MaxDisplayTime{ 5.f }; //In Seconds
+	float m_CurrentDisplayTime{ 0.f };
 
 
 	// FUNCTIONS
-	void Initialize( );
-	void Cleanup( );
-	void ClearBackground( ) const;
+	void Initialize();
+	void Cleanup();
+	void ClearBackground() const;
 
 	void HandleInput();
 	void CreateHallways();
+	void ResetDungeon();
+	void HandleDungeonGeneration();
+	void UpdateTimer(float elapsedSec);
+	void PrintControls() const;
 };
