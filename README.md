@@ -45,7 +45,8 @@ To achieve this I used the [Bowyer-Watson](https://en.wikipedia.org/wiki/Bowyer%
 
 Connecting every room to every neighbour, however, would cause some very weird-looking dungeons that have too many loops.
 That is why we get the [Minimum Spanning Tree](https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Minimum_spanning_tree.svg/450px-Minimum_spanning_tree.svg.png) (MST) that connects every room to a very close neighbour.
-After that, we loop over all the edges that the MST algorithm deleted and give each one about a 20% chance to be introduced back to the graph.
+I did that using [Kruskal's Algorithm](https://en.wikipedia.org/wiki/Kruskal%27s_algorithm). After that, we loop over all the edges that the MST 
+algorithm deleted and give each one about a 20% chance to be introduced back to the graph.
 Using this combination of algorithms we guarantee that every room has been reached and some loops occur in the dungeon so as to not be stale.
 
 ![](https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Minimum_spanning_tree.svg/450px-Minimum_spanning_tree.svg.png)
